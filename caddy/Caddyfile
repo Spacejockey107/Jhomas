@@ -1,0 +1,65 @@
+# Jhomas web server (Caddy)
+#
+# Jobs:
+#   1. HTTPS with Caddy's own private certificate authority (tls internal)
+#   2. One login for the whole site (basic_auth)
+#   3. Forwards /api/* to the OpenCode server, adding OpenCode's password itself
+#   4. Serves the client page (/) and the Milestone 0 test pages (/tests/)
+#
+# Values come from environment variables set in ~/docker/ai/.env:
+#   JHOMAS_USER, JHOMAS_PASSWORD_HASH, OPENCODE_AUTH_B64
+
+{
+	# Browsers send no server name (SNI) when they connect to an IP address,
+	# so this tells Caddy which certificate to present in that case.
+	default_sni 10.10.0.1
+
+	# Only port 443 is published, so skip the automatic HTTP -> HTTPS redirect.
+	auto_https disable_redirects
+
+	# Caddy can't install its authority into your devices from inside a
+	# container; you trust it once per device instead (see README).
+	skip_install_trust
+}
+
+https://10.10.0.1 {
+	tls internal
+
+	basic_auth {
+		{$JHOMAS_USER} {$JHOMAS_PASSWORD_HASH}
+	}
+
+	header {
+		# Cross-origin isolation: lets the speech models use multiple CPU
+		# threads (SharedArrayBuffer). "credentialless" still allows loading
+		# libraries and model files from other sites.
+		Cross-Origin-Opener-Policy same-origin
+		Cross-Origin-Embedder-Policy credentialless
+		-Server
+	}
+
+	# OpenCode's API. /api/event becomes /event upstream, and so on.
+	handle_path /api/* {
+		reverse_proxy opencode:4096 {
+			header_up Authorization "Basic {$OPENCODE_AUTH_B64}"
+			# Pass the event stream through immediately instead of buffering it.
+			flush_interval -1
+		}
+	}
+
+	# Caddy's root certificate, so devices can download and trust it.
+	handle /root.crt {
+		root * /data/caddy/pki/authorities/local
+		file_server
+	}
+
+	handle_path /tests/* {
+		root * /srv/tests
+		file_server
+	}
+
+	handle {
+		root * /srv/site
+		file_server
+	}
+}

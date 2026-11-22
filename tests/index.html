@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jhomas · Milestone 0 tests</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+<h1>Milestone 0 tests</h1>
+<p class="muted">Each test answers one question before anything is built on it. Run them on a PC first, then the phone. Every page has a <b>Copy results</b> button; paste the results into the chat.</p>
+
+<section>
+<h2>This device</h2>
+<div id="env">Checking…</div>
+<p class="muted">All three rows above the CPU line should say yes on a PC. If "Secure page" says no, the certificate isn't trusted yet.</p>
+</section>
+
+<section>
+<h2>Tests</h2>
+<ol>
+  <li><a href="stt.html">Speech-to-text speed</a>: which model transcribes fast enough and accurately.</li>
+  <li><a href="tts.html">Text-to-speech speed</a>: how long until the first sentence starts playing.</li>
+  <li><a href="echo.html">Echo cancellation</a>: whether the mic ignores the page's own voice.</li>
+  <li><a href="background.html">Background behaviour</a>: whether listening continues in a background tab or with the screen off.</li>
+  <li><a href="api.html">OpenCode API</a>: records the server's event stream during a real turn.</li>
+</ol>
+<p class="muted">The wake-word test comes later: "Jhomas" needs a model trained for it first.</p>
+</section>
+</main>
+<script type="module">
+import { $, environment, renderEnvironment } from './common.js';
+renderEnvironment($('env'), await environment());
+</script>
+</body>
+</html>

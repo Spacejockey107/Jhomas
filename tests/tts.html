@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jhomas · TTS test</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+<p><a href="./">← Tests</a></p>
+<h1>Test 2: text-to-speech speed</h1>
+<p>Loads Kokoro, then speaks a short reply the way Jhomas will: one sentence at a time, starting as soon as the first sentence is ready.</p>
+<p class="muted">Pass: first audio in under 0.5 s on a PC and under 1 s on the phone (once loaded), with no gaps between sentences. The first load downloads the model (about 90 MB at q8, 330 MB at fp32).</p>
+
+<section>
+<h2>1. Load the model</h2>
+<label>Device
+  <select id="device">
+    <option value="webgpu">WebGPU (graphics chip)</option>
+    <option value="wasm">WASM (CPU)</option>
+  </select>
+</label>
+<label>Precision
+  <select id="dtype">
+    <option value="fp32">fp32 (WebGPU default)</option>
+    <option value="fp16">fp16</option>
+    <option value="q8">q8 (WASM default)</option>
+    <option value="q4">q4</option>
+  </select>
+</label>
+<label>Voice <input type="text" id="voice" value="af_heart" list="voices" size="12"></label>
+<datalist id="voices">
+  <option value="af_heart"><option value="af_bella"><option value="af_nicole"><option value="af_sarah">
+  <option value="am_michael"><option value="am_fenrir"><option value="am_puck">
+  <option value="bf_emma"><option value="bm_george"><option value="bm_fable"><option value="bm_daniel">
+</datalist>
+<br>
+<button id="load">Load Kokoro</button>
+<span id="loadStatus" class="status"></span>
+</section>
+
+<section>
+<h2>2. Speak a reply</h2>
+<textarea id="text">I checked the logs. The container restarted twice today, both times because it ran out of memory. I saved the details to a file called restarts dot txt.</textarea>
+<button id="speak" disabled>Speak sentence by sentence</button>
+<span id="speakStatus" class="status"></span>
+<p>Time to first audio: <span id="first" class="big">—</span></p>
+<table>
+  <thead><tr><th>#</th><th>Sentence</th><th>Generate</th><th>Audio length</th><th>Ready in time?</th></tr></thead>
+  <tbody id="results"></tbody>
+</table>
+<button id="copy" class="secondary">Copy results</button>
+<pre id="log" class="log"></pre>
+</section>
+
+<section>
+<h2>This device</h2>
+<div id="env">Checking…</div>
+</section>
+</main>
+<script type="module" src="tts.js"></script>
+</body>
+</html>

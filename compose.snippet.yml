@@ -1,0 +1,21 @@
+# Paste this service under `services:` in ~/docker/ai/compose.yml.
+# It assumes this repository is cloned to ~/docker/ai/jhomas.
+
+  jhomas:
+    image: caddy:2
+    container_name: jhomas
+    restart: unless-stopped
+    ports:
+      - "8443:443"
+    volumes:
+      - ./jhomas/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./jhomas/site:/srv/site:ro
+      - ./jhomas/tests:/srv/tests:ro
+      - ./jhomas-data:/data
+      - ./jhomas-config:/config
+    environment:
+      JHOMAS_USER: ${JHOMAS_USER:?set JHOMAS_USER in ~/docker/ai/.env}
+      JHOMAS_PASSWORD_HASH: ${JHOMAS_PASSWORD_HASH:?set JHOMAS_PASSWORD_HASH in ~/docker/ai/.env}
+      OPENCODE_AUTH_B64: ${OPENCODE_AUTH_B64:?set OPENCODE_AUTH_B64 in ~/docker/ai/.env}
+    depends_on:
+      - opencode

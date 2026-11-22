@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jhomas · OpenCode API test</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+<p><a href="./">← Tests</a></p>
+<h1>Test 5: OpenCode API</h1>
+<p>Records what OpenCode's server sends during a real turn, so the adapter is written against actual events instead of guesses. This page talks to OpenCode through Caddy at <code>/api</code>.</p>
+
+<section>
+<h2>1. Server check and API description</h2>
+<button id="health">Check health</button>
+<button id="spec" class="secondary">Load API description (/doc)</button>
+<button id="specDownload" class="secondary" disabled>Download it</button>
+<span id="specStatus" class="status"></span>
+<pre id="paths" class="log" hidden></pre>
+</section>
+
+<section>
+<h2>2. Record the event stream</h2>
+<ol>
+  <li>Press <b>Start recording</b>.</li>
+  <li>In another tab, open OpenCode's own web UI (<code>http://10.10.0.1:4096</code>), select the Voice agent and send these, one at a time, waiting for each to finish:
+    <ol>
+      <li><i>List the files in /reference/llama-swap.</i></li>
+      <li><i>Use the task tool to have the worker write a script that prints the first five primes and run it.</i> Approve the run when asked.</li>
+      <li><i>Run the command date.</i> This time, while the approval is waiting, type another message (<i>never mind</i>) before answering, then deny.</li>
+      <li>Send any long request and press OpenCode's stop button partway through.</li>
+    </ol>
+  </li>
+  <li>Come back, press <b>Stop</b>, then <b>Download events</b>, and attach the file in the chat.</li>
+</ol>
+<label>Stream path <input type="text" id="streamPath" value="/event" size="16"></label>
+<span class="muted">If <code>/event</code> records nothing during a turn, try <code>/global/event</code>.</span><br>
+<button id="startRec">Start recording</button>
+<button id="stopRec" class="secondary" disabled>Stop</button>
+<button id="download" class="secondary" disabled>Download events</button>
+<span id="recStatus" class="status"></span>
+<table>
+  <thead><tr><th>Event type</th><th>Count</th></tr></thead>
+  <tbody id="counts"></tbody>
+</table>
+<label>Filter <input type="text" id="filter" placeholder="e.g. permission" size="24"></label>
+<pre id="events" class="log"></pre>
+</section>
+
+<section>
+<h2>3. Send a request by hand (optional)</h2>
+<label>Method
+  <select id="method"><option>GET</option><option>POST</option><option>DELETE</option><option>PATCH</option></select>
+</label>
+<label>Path <input type="text" id="path" value="/session" size="40"></label>
+<textarea id="body" placeholder="JSON body (POST/PATCH only)"></textarea>
+<button id="send">Send</button>
+<pre id="response" class="log"></pre>
+</section>
+</main>
+<script type="module" src="api.js"></script>
+</body>
+</html>

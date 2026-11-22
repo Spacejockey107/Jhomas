@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jhomas · Echo test</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+<p><a href="./">← Tests</a></p>
+<h1>Test 3: echo cancellation</h1>
+<p>Checks whether the mic ignores speech the page itself plays through your <b>speakers</b>. If it doesn't, Jhomas would hear its own voice as you talking and interrupt itself. Use speakers, not headphones, at a normal listening volume.</p>
+<p class="muted">Pass: zero detections while you stay silent, and your own speech still detected when you talk over the playback.</p>
+
+<section>
+<h2>1. Record a voice sample</h2>
+<p>This stands in for Jhomas's voice. Read anything aloud for 6 seconds.</p>
+<button id="record">Record 6 s</button>
+<span id="recStatus" class="status"></span>
+</section>
+
+<section>
+<h2>2. Play it while the mic listens</h2>
+<label>Playback path
+  <select id="path">
+    <option value="webaudio">Normal page audio (what Jhomas would do by default)</option>
+    <option value="webrtc">Routed through a WebRTC loopback (the known workaround)</option>
+  </select>
+</label>
+<label><input type="checkbox" id="ec" checked> Echo cancellation on</label>
+<br>
+<button id="silent" disabled>Run: I stay silent</button>
+<button id="talk" disabled>Run: I talk over it</button>
+<span id="runStatus" class="status"></span>
+<p>Speech detected during this run: <span id="count" class="big">—</span></p>
+<table>
+  <thead><tr><th>Run</th><th>Path</th><th>Echo cancellation</th><th>You</th><th>Detections</th><th>Verdict</th></tr></thead>
+  <tbody id="results"></tbody>
+</table>
+<button id="copy" class="secondary">Copy results</button>
+<pre id="log" class="log"></pre>
+</section>
+
+<section>
+<h2>This device</h2>
+<div id="env">Checking…</div>
+</section>
+</main>
+<script type="module" src="echo.js"></script>
+</body>
+</html>

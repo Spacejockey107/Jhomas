@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jhomas · STT test</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+<p><a href="./">← Tests</a></p>
+<h1>Test 1: speech-to-text speed</h1>
+<p>Record one 5-second clip, then transcribe it with each model. The time that matters is <b>warm time</b>: the second run, once the model is loaded and compiled.</p>
+<p class="muted">Pass: warm time under 1 s on a PC and under 2 s on the phone, with a transcript you'd accept. The first load downloads each model (40–300 MB), so it's slow once.</p>
+
+<section>
+<h2>1. Record a clip</h2>
+<p>Say something like a real request: <i>"Check whether the llama-swap container restarted today and tell me why."</i></p>
+<button id="record">Record 5 s</button>
+<button id="play" class="secondary" disabled>Play it back</button>
+<span id="recStatus" class="status"></span>
+</section>
+
+<section>
+<h2>2. Choose models</h2>
+<div id="models"></div>
+<label>Other model ID <input type="text" id="customModel" placeholder="e.g. onnx-community/whisper-small.en" size="40"></label>
+<div>
+  <label>Device
+    <select id="device">
+      <option value="webgpu">WebGPU (graphics chip)</option>
+      <option value="wasm">WASM (CPU)</option>
+    </select>
+  </label>
+  <label>Precision
+    <select id="dtype">
+      <option value="mixed">encoder fp32, decoder q4 (WebGPU default)</option>
+      <option value="fp32">fp32</option>
+      <option value="fp16">fp16</option>
+      <option value="q8">q8 (WASM default)</option>
+      <option value="q4">q4</option>
+    </select>
+  </label>
+</div>
+<button id="run" disabled>Run selected models</button>
+<span id="runStatus" class="status"></span>
+</section>
+
+<section>
+<h2>3. Results</h2>
+<table>
+  <thead><tr><th>Model</th><th>Load</th><th>First run</th><th>Warm run</th><th>Warm ÷ audio</th><th>Transcript</th></tr></thead>
+  <tbody id="results"></tbody>
+</table>
+<button id="copy" class="secondary">Copy results</button>
+<pre id="log" class="log"></pre>
+</section>
+
+<section>
+<h2>This device</h2>
+<div id="env">Checking…</div>
+</section>
+</main>
+<script type="module" src="stt.js"></script>
+</body>
+</html>

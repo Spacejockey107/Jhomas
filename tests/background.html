@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jhomas · Background test</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+<p><a href="./">← Tests</a></p>
+<h1>Test 4: background behaviour</h1>
+<p>Keeps the mic listening and plays a short beep every 30 s. Then you leave the page and check whether it kept working while you were away.</p>
+<ol>
+  <li>Press <b>Start</b>.</li>
+  <li><b>PC:</b> switch to another tab for about 2 minutes, say a few sentences while you're away, then come back. Repeat with the Vivaldi window minimised.<br>
+      <b>Phone:</b> do the same by switching to another app, then again with the screen off.</li>
+  <li>Come back and press <b>Copy results</b>.</li>
+</ol>
+<p class="muted">Pass: the "while hidden" frame rate stays near the visible rate (about 31 per second), and speech you made while away appears in the log. You should also hear the beeps while away.</p>
+
+<section>
+<button id="start">Start</button>
+<button id="stop" class="secondary" disabled>Stop</button>
+<label><input type="checkbox" id="beep" checked> Beep every 30 s</label>
+<label><input type="checkbox" id="wake"> Keep the screen awake</label>
+<span id="status" class="status"></span>
+<table>
+  <thead><tr><th></th><th>Time</th><th>VAD frames per second</th><th>Speech detected</th><th>Slowest 1-second timer</th></tr></thead>
+  <tbody>
+    <tr><th>Visible</th><td id="visTime">—</td><td id="visRate">—</td><td id="visSpeech">—</td><td id="visTimer">—</td></tr>
+    <tr><th>Hidden</th><td id="hidTime">—</td><td id="hidRate">—</td><td id="hidSpeech">—</td><td id="hidTimer">—</td></tr>
+  </tbody>
+</table>
+<button id="copy" class="secondary">Copy results</button>
+<pre id="log" class="log"></pre>
+</section>
+
+<section>
+<h2>This device</h2>
+<div id="env">Checking…</div>
+</section>
+</main>
+<script type="module" src="background.js"></script>
+</body>
+</html>
