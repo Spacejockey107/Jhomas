@@ -49,6 +49,9 @@ https://10.10.0.1 {
 
 	# Caddy's root certificate, so devices can download and trust it.
 	handle /root.crt {
+		# Label it as a certificate and make browsers download it instead of showing it.
+		header Content-Type application/x-x509-ca-cert
+		header Content-Disposition "attachment; filename=jhomas-root.crt"
 		root * /data/caddy/pki/authorities/local
 		file_server
 	}
