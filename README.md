@@ -2,15 +2,20 @@
 
 A hands-free voice client for a self-hosted OpenCode agent. Speech recognition and speech synthesis run in the browser; only text goes to the server. The server side is one Caddy container in front of an existing OpenCode server.
 
-Status: **Milestone 0** — the server setup and the feasibility test pages. The voice client itself comes next.
+Status: **Milestone 1** — typed conversation with streaming replies, tool steps, worker hand-offs and approvals. Voice comes in Milestone 2.
 
 ## Layout
 
 ```
 caddy/Caddyfile        HTTPS, login, /api forwarding to OpenCode, static files
 compose.snippet.yml    The service block for ~/docker/ai/compose.yml
-site/                  The voice client (placeholder for now)
+site/                  The client, served at /
+  agent/adapter.js       The generic agent contract
+  agent/opencode-v1.js   The only OpenCode-specific code
+  ui/                    Transcript, approval cards, debug panel
+  config.js              Default models and voice settings
 tests/                 Milestone 0 test pages, served at /tests/
+dev/                   Tools for testing without the real server (not served)
 ```
 
 ## Setup on spacejockey
@@ -93,6 +98,20 @@ The log should show Caddy issuing a certificate for `10.10.0.1` and no errors.
 ### 6. Run the tests
 
 Open `https://10.10.0.1:8443/tests/`.
+
+## Using it
+
+Open `https://10.10.0.1:8443`. It opens your most recent OpenCode conversation; *New* starts another, and the drop-down switches between them. Approvals appear above the message box and wait until you answer. *Debug* at the bottom shows timings and the raw events.
+
+## Testing without the server
+
+`dev/mock-opencode.mjs` serves the client and replays an event recording from `tests/api.html`, pausing at approvals until the page answers:
+
+```bash
+node dev/mock-opencode.mjs opencode-events.json 8765
+```
+
+`dev/replay-opencode.mjs` prints what the adapter makes of a recording.
 
 ## Updating
 

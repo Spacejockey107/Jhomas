@@ -2,15 +2,36 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content">
 <title>Jhomas</title>
-<link rel="stylesheet" href="/tests/style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Ccircle cx=%228%22 cy=%228%22 r=%227%22 fill=%22%232f6fde%22/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-<main>
-<h1>Jhomas</h1>
-<p>The voice client isn't built yet. If you can read this over HTTPS without a certificate warning, Caddy and the certificate are working.</p>
-<p><a href="/tests/">Milestone 0 test pages</a></p>
-</main>
+<header>
+  <span class="name">Jhomas</span>
+  <span id="connection" class="dot" title="Connecting"></span>
+  <select id="sessions" aria-label="Conversation"></select>
+  <button id="newSession" class="secondary">New</button>
+</header>
+
+<main id="transcript" aria-live="polite"></main>
+
+<footer>
+  <div id="approvals" hidden></div>
+  <div class="composer">
+    <textarea id="input" rows="1" placeholder="Message Jhomas" aria-label="Message"></textarea>
+    <button id="send">Send</button>
+    <button id="stop" class="secondary" disabled>Stop</button>
+  </div>
+  <div class="statusline"><span id="status"></span></div>
+  <details id="debugBox">
+    <summary>Debug</summary>
+    <div id="timings" class="muted">No turns yet.</div>
+    <pre id="debugLog" class="log"></pre>
+  </details>
+</footer>
+
+<script type="module" src="app.js"></script>
 </body>
 </html>
