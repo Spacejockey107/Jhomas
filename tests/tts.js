@@ -89,6 +89,13 @@ $('speak').onclick = async () => {
       // finished before this one was ready, there was an audible gap.
       const late = i > 0 && ctx.currentTime > playheadEnd;
       if (late) run.gaps++;
+      // Fade the first and last 5 ms so clips don't click when they start and stop.
+      const fade = Math.min(Math.floor(rate * 0.005), Math.floor(samples.length / 2));
+      for (let k = 0; k < fade; k++) {
+        const g = k / fade;
+        samples[k] *= g;
+        samples[samples.length - 1 - k] *= g;
+      }
       const buf = ctx.createBuffer(1, samples.length, rate);
       buf.copyToChannel(samples, 0);
       const src = ctx.createBufferSource();

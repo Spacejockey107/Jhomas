@@ -6,6 +6,9 @@ const MODELS = [
   { id: 'onnx-community/moonshine-base-ONNX', note: 'Moonshine base, 61M, English' },
   { id: 'onnx-community/whisper-tiny.en', note: 'Whisper tiny, 39M, English' },
   { id: 'onnx-community/whisper-base.en', note: 'Whisper base, 74M, English' },
+  { id: 'onnx-community/distil-small.en', note: 'Distil-Whisper small, 166M, English' },
+  { id: 'onnx-community/whisper-small.en', note: 'Whisper small, 244M, English' },
+  { id: 'onnx-community/whisper-large-v3-turbo', note: 'Whisper large v3 turbo, 809M, large download' },
 ];
 
 const logger = makeLogger($('log'));
