@@ -22,7 +22,8 @@ $('load').onclick = async () => {
     const dtype = $('dtype').value;
     let lastPct = -10;
     const t0 = now();
-    tts = await KokoroTTS.from_pretrained(MODEL_ID, {
+    const modelId = $('model').value.trim() || MODEL_ID;
+    tts = await KokoroTTS.from_pretrained(modelId, {
       device,
       dtype,
       progress_callback: (p) => {
@@ -40,7 +41,7 @@ $('load').onclick = async () => {
     await tts.generate('Ready.', { voice: $('voice').value.trim() });
     const warmupMs = now() - t1;
 
-    loadInfo = { device, dtype, loadMs, warmupMs };
+    loadInfo = { modelId, device, dtype, loadMs, warmupMs };
     $('loadStatus').textContent = `Loaded in ${ms(loadMs)}, warm-up ${ms(warmupMs)}`;
     logger.log(`Kokoro loaded: ${device}, ${dtype}, load ${ms(loadMs)}, warm-up ${ms(warmupMs)}`);
     $('speak').disabled = false;
@@ -129,7 +130,7 @@ $('speak').onclick = async () => {
 
 $('copy').onclick = (ev) => {
   const lines = ['TTS test results'];
-  if (loadInfo) lines.push(`Kokoro ${loadInfo.device}, ${loadInfo.dtype}: load ${ms(loadInfo.loadMs)}, warm-up ${ms(loadInfo.warmupMs)}`);
+  if (loadInfo) lines.push(`${loadInfo.modelId} ${loadInfo.device}, ${loadInfo.dtype}: load ${ms(loadInfo.loadMs)}, warm-up ${ms(loadInfo.warmupMs)}`);
   runs.forEach((r, n) => {
     lines.push(`Run ${n + 1} (${r.device}, ${r.dtype}, ${r.voice}): first audio ${ms(r.firstAudioMs)}, gaps ${r.gaps}`);
     r.sentences.forEach((s, i) => lines.push(`  ${i + 1}. generate ${ms(s.genMs)}, audio ${sec(s.audioSec)}${s.late ? ', GAP' : ''}`));
