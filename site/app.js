@@ -1,11 +1,12 @@
-// Jhomas client, Milestone 1: typed conversation with streaming replies and approvals.
-// Voice input and output are added on top of this in Milestone 2.
+// Jhomas client: typed or spoken conversation with streaming replies and approvals.
 
 import { config } from './config.js';
 import { OpenCodeV1Adapter } from './agent/opencode-v1.js';
 import { Transcript } from './ui/transcript.js';
 import { Approvals } from './ui/approvals.js';
 import { DebugPanel } from './ui/debug.js';
+import { Voice } from './voice.js';
+import { loadSettings, renderSettings } from './settings.js';
 
 const $ = (id) => document.getElementById(id);
 const SESSION_KEY = 'jhomas.session';
@@ -14,6 +15,45 @@ const agent = new OpenCodeV1Adapter({ base: config.apiBase, agent: config.agent 
 const transcript = new Transcript($('transcript'));
 const approvals = new Approvals($('approvals'), (id, sessionId, reply) => agent.replyApproval(id, sessionId, reply));
 const debug = new DebugPanel({ timings: $('timings'), log: $('debugLog') });
+const settings = loadSettings(config);
+renderSettings($('settings'), settings);
+
+const MIC_LABELS = {
+  off: 'Voice off',
+  loading: 'Loading…',
+  listening: 'Listening',
+  hearing: 'Hearing you',
+  transcribing: 'Transcribing',
+  waiting: 'Thinking',
+  speaking: 'Speaking',
+};
+let loadPercent = null;
+
+const voice = new Voice({
+  config,
+  settings,
+  on: {
+    state: (state) => {
+      const button = $('mic');
+      button.dataset.state = state;
+      button.textContent = MIC_LABELS[state] ?? state;
+      button.setAttribute('aria-pressed', String(state !== 'off'));
+      button.title = state === 'off' ? 'Turn voice on' : 'Turn voice off';
+      renderStatus();
+    },
+    transcript: (text) => sendText(text),
+    timing: (name) => debug.mark(name),
+    progress: (percent) => {
+      loadPercent = percent;
+      renderStatus();
+    },
+    warning: (message) => transcript.note(message),
+    error: (message) => transcript.note(message, 'error'),
+  },
+});
+
+// For debugging from the browser console.
+window.jhomas = { agent, voice, settings };
 
 let currentId = null;
 let sessions = [];
@@ -35,7 +75,8 @@ function setBusy(busy) {
 
 function renderStatus(busy = !$('stop').disabled) {
   let text = '';
-  if (approvals.pending.length) text = 'Waiting for your approval';
+  if (voice.state === 'loading') text = `Loading speech models${loadPercent != null ? ` (${loadPercent}%)` : '…'} — the first time takes a while`;
+  else if (approvals.pending.length) text = 'Waiting for your approval';
   else if (workerRunning) text = 'Worker running…';
   else if (busy) text = 'Working…';
   $('status').textContent = text;
@@ -98,14 +139,23 @@ agent.on('sessionUpdated', ({ id, title }) => {
   if (option) option.textContent = sessionLabel(s ?? { title });
 });
 
-agent.on('userMessage', ({ text }) => transcript.confirmUser(text));
+agent.on('userMessage', ({ text }) => {
+  // A message sent from another device: that device speaks the reply, not this one.
+  if (!transcript.confirmUser(text)) voice.notSpeaker();
+});
 
 agent.on('textDelta', ({ partId, delta, sessionId, isWorker }) => {
-  if (!isWorker) debug.mark('firstText');
+  if (!isWorker) {
+    debug.mark('firstText');
+    voice.replyDelta(partId, delta);
+  }
   transcript.appendText(partId, delta, sessionId, isWorker);
 });
 
-agent.on('textDone', ({ partId, text, sessionId, isWorker }) => transcript.finishText(partId, text, sessionId, isWorker));
+agent.on('textDone', ({ partId, text, sessionId, isWorker }) => {
+  if (!isWorker) voice.replyDone(partId, text);
+  transcript.finishText(partId, text, sessionId, isWorker);
+});
 agent.on('toolStart', (p) => transcript.toolStart(p));
 agent.on('toolEnd', (p) => transcript.toolEnd(p));
 
@@ -129,6 +179,8 @@ agent.on('approvalRequested', (approval) => {
 agent.on('approvalResolved', ({ id, reply }) => {
   const resolved = approvals.resolve(id);
   if (resolved) transcript.note(`${reply === 'reject' ? 'Denied' : 'Approved'}: ${resolved.command}`, '', resolved.sessionId, resolved.isWorker);
+  // After a denial OpenCode ends the voice agent's turn without a reply, so say something.
+  if (resolved && reply === 'reject' && !resolved.isWorker) voice.say(config.lines.denied);
   renderStatus();
 });
 
@@ -140,11 +192,17 @@ agent.on('turnEnd', () => {
   debug.mark('turnEnd');
   workerRunning = false;
   setBusy(false);
+  voice.turnEnded();
 });
 
 agent.on('error', ({ message, aborted, isWorker }) => {
-  if (aborted) transcript.note('Stopped.');
-  else transcript.note(`${isWorker ? 'Worker error' : 'Error'}: ${message}`, 'error');
+  if (aborted) {
+    voice.notSpeaker(); // don't read out the partial reply that arrives after a stop
+    transcript.note('Stopped.');
+    return;
+  }
+  if (!isWorker) voice.turnEnded();
+  transcript.note(`${isWorker ? 'Worker error' : 'Error'}: ${message}`, 'error');
 });
 
 // ---------- controls ----------
@@ -156,18 +214,26 @@ function autosize() {
   input.style.height = `${input.scrollHeight}px`;
 }
 
-async function send() {
-  const text = input.value.trim();
-  if (!text || !currentId) return;
-  input.value = '';
-  autosize();
+// Typed and spoken messages both go through here.
+async function sendText(text) {
+  if (!currentId) return;
   transcript.addUser(text, { pending: true });
   debug.mark('sent');
+  voice.expectReply();
   try {
     await agent.send(text);
   } catch (e) {
     transcript.note(`Couldn't send: ${e.message}`, 'error');
+    voice.turnEnded();
   }
+}
+
+function send() {
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  autosize();
+  sendText(text);
 }
 
 input.addEventListener('input', autosize);
@@ -180,6 +246,7 @@ input.addEventListener('keydown', (e) => {
 $('send').onclick = send;
 
 $('stop').onclick = async () => {
+  voice.notSpeaker(); // stop talking and don't read out the rest of this reply
   try {
     await agent.abort();
   } catch (e) {
@@ -199,6 +266,11 @@ $('newSession').onclick = async () => {
 };
 
 $('sessions').onchange = (e) => openSession(e.target.value);
+
+$('mic').onclick = () => {
+  if (voice.state === 'off') voice.enable();
+  else if (voice.state !== 'loading') voice.disable();
+};
 $('debugBox').addEventListener('toggle', () => debug.refresh());
 
 // ---------- start ----------

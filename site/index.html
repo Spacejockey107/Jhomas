@@ -13,6 +13,7 @@
   <span id="connection" class="dot" title="Connecting"></span>
   <select id="sessions" aria-label="Conversation"></select>
   <button id="newSession" class="secondary">New</button>
+  <button id="mic" class="mic" data-state="off" aria-pressed="false" title="Turn voice on">Voice off</button>
 </header>
 
 <main id="transcript" aria-live="polite"></main>
@@ -25,6 +26,10 @@
     <button id="stop" class="secondary" disabled>Stop</button>
   </div>
   <div class="statusline"><span id="status"></span></div>
+  <details id="settingsBox">
+    <summary>Voice settings</summary>
+    <div id="settings"></div>
+  </details>
   <details id="debugBox">
     <summary>Debug</summary>
     <div id="timings" class="muted">No turns yet.</div>

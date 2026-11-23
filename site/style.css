@@ -131,3 +131,18 @@ select { font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-
   border-radius: 6px;
   padding: 6px;
 }
+
+button.mic { min-width: 7.5em; }
+button.mic[data-state="off"] { background: transparent; color: var(--accent); }
+button.mic[data-state="loading"] { background: transparent; color: var(--warn); border-color: var(--warn); }
+button.mic[data-state="listening"] { background: var(--good); border-color: var(--good); }
+button.mic[data-state="hearing"] { background: var(--good); border-color: var(--good); box-shadow: 0 0 0 3px color-mix(in srgb, var(--good) 35%, transparent); }
+button.mic[data-state="transcribing"],
+button.mic[data-state="waiting"] { background: var(--accent); }
+button.mic[data-state="speaking"] { background: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); }
+#settingsBox { font-size: 14px; color: var(--muted); }
+#settingsBox summary { cursor: pointer; }
+#settings { display: flex; flex-direction: column; gap: 6px; padding: 8px 0; }
+.setting { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; color: var(--fg); }
+.setting > span:first-child { min-width: 11em; color: var(--muted); }
+.setting input[type=text] { font: inherit; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); max-width: 100%; }

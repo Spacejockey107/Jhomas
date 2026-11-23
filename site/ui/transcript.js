@@ -58,14 +58,16 @@ export class Transcript {
   }
 
   // A message arrived from the server. If it's one we just sent, confirm it instead of adding it twice.
+  // Returns true if it was a message this page sent.
   confirmUser(text) {
     for (const node of this.root.querySelectorAll('.msg.user.pending')) {
       if (node.textContent === text) {
         node.classList.remove('pending');
-        return;
+        return true;
       }
     }
     this.addUser(text);
+    return false;
   }
 
   appendText(partId, delta, sessionId, isWorker) {

@@ -2,7 +2,7 @@
 
 A hands-free voice client for a self-hosted OpenCode agent. Speech recognition and speech synthesis run in the browser; only text goes to the server. The server side is one Caddy container in front of an existing OpenCode server.
 
-Status: **Milestone 1** — typed conversation with streaming replies, tool steps, worker hand-offs and approvals. Voice comes in Milestone 2.
+Status: **Milestone 2** — hands-free voice: speech is transcribed in the browser, replies are spoken sentence by sentence. Barge-in, spoken status during tools, voice approvals and the wake word come next.
 
 ## Layout
 
@@ -13,7 +13,10 @@ site/                  The client, served at /
   agent/adapter.js       The generic agent contract
   agent/opencode-v1.js   The only OpenCode-specific code
   ui/                    Transcript, approval cards, debug panel
-  config.js              Default models and voice settings
+  voice.js               The voice loop: listen, transcribe, send, speak
+  speech/                Speech engines (run in background threads), audio player, text helpers
+  settings.js            Per-device voice settings
+  config.js              Default models, voice settings and recognition corrections
 tests/                 Milestone 0 test pages, served at /tests/
 dev/                   Tools for testing without the real server (not served)
 ```
@@ -101,7 +104,11 @@ Open `https://10.10.0.1:8443/tests/`.
 
 ## Using it
 
-Open `https://10.10.0.1:8443`. It opens your most recent OpenCode conversation; *New* starts another, and the drop-down switches between them. Approvals appear above the message box and wait until you answer. *Debug* at the bottom shows timings and the raw events.
+Open `https://10.10.0.1:8443`. It opens your most recent OpenCode conversation; *New* starts another, and the drop-down switches between them. Approvals appear above the message box and wait until you answer.
+
+**Voice:** press *Voice off* to turn the mic on. The first time, the page downloads the speech models (several hundred MB; later visits load them from the browser's cache). While it shows *Listening*, everything you say is sent when you pause; the reply is spoken on the device that sent the message. Typed messages are spoken too while voice is on. *Voice settings* changes the voice, speed and models for this browser.
+
+*Debug* shows each turn's timings (end of speech → sent → first text → first audio → finished) and the raw events.
 
 ## Testing without the server
 
@@ -111,7 +118,7 @@ Open `https://10.10.0.1:8443`. It opens your most recent OpenCode conversation; 
 node dev/mock-opencode.mjs opencode-events.json 8765
 ```
 
-`dev/replay-opencode.mjs` prints what the adapter makes of a recording.
+`dev/replay-opencode.mjs` prints what the adapter makes of a recording. `dev/test-text.mjs` checks sentence splitting, speech cleanup and recognition corrections.
 
 ## Updating
 
