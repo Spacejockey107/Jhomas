@@ -8,6 +8,8 @@ let tts = null;
 let loadInfo = null;
 const runs = [];
 
+$('speed').oninput = () => ($('speedValue').textContent = `${Number($('speed').value).toFixed(2)}×`);
+
 $('device').onchange = () => {
   $('dtype').value = $('device').value === 'webgpu' ? 'fp32' : 'q8';
 };
@@ -75,7 +77,7 @@ $('speak').onclick = async () => {
   const ctx = audioContext();
   await ctx.resume();
 
-  const run = { ...loadInfo, voice, sentences: [], firstAudioMs: null, gaps: 0 };
+  const run = { ...loadInfo, voice, speed: Number($('speed').value), sentences: [], firstAudioMs: null, gaps: 0 };
   const start = now();
   let playheadEnd = 0; // AudioContext time when queued audio finishes
 
@@ -83,7 +85,7 @@ $('speak').onclick = async () => {
     for (let i = 0; i < sentences.length; i++) {
       $('speakStatus').textContent = `Generating sentence ${i + 1} of ${sentences.length}…`;
       const t0 = now();
-      const { samples, rate } = samplesOf(await tts.generate(sentences[i], { voice }));
+      const { samples, rate } = samplesOf(await tts.generate(sentences[i], { voice, speed: run.speed }));
       const genMs = now() - t0;
 
       // Queue it right after the previous sentence. If the previous one already
@@ -132,7 +134,7 @@ $('copy').onclick = (ev) => {
   const lines = ['TTS test results'];
   if (loadInfo) lines.push(`${loadInfo.modelId} ${loadInfo.device}, ${loadInfo.dtype}: load ${ms(loadInfo.loadMs)}, warm-up ${ms(loadInfo.warmupMs)}`);
   runs.forEach((r, n) => {
-    lines.push(`Run ${n + 1} (${r.device}, ${r.dtype}, ${r.voice}): first audio ${ms(r.firstAudioMs)}, gaps ${r.gaps}`);
+    lines.push(`Run ${n + 1} (${r.device}, ${r.dtype}, ${r.voice}, speed ${r.speed}): first audio ${ms(r.firstAudioMs)}, gaps ${r.gaps}`);
     r.sentences.forEach((s, i) => lines.push(`  ${i + 1}. generate ${ms(s.genMs)}, audio ${sec(s.audioSec)}${s.late ? ', GAP' : ''}`));
   });
   lines.push('', 'Environment: ' + JSON.stringify(env));
