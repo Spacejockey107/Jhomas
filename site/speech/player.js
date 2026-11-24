@@ -46,7 +46,17 @@ export class Player {
     return startAt - ctx.currentTime;
   }
 
+  // Freezes playback in place (used while checking whether you're interrupting).
+  pause() {
+    if (this.ctx?.state === 'running') this.ctx.suspend();
+  }
+
+  resume() {
+    if (this.ctx?.state === 'suspended') this.ctx.resume();
+  }
+
   stop() {
+    this.resume();
     for (const s of this.sources) {
       s.onended = null;
       try { s.stop(); } catch { /* already stopped */ }

@@ -11,7 +11,11 @@ export function loadSettings(config) {
     voice: config.tts.voice,
     speed: config.tts.speed,
     speakReplies: true,
+    bargeIn: true,
+    playbackRate: 1,
   };
+  // Phones get the lighter recognition model unless one was chosen.
+  if (/Android|iPhone|iPad/i.test(navigator.userAgent)) defaults.sttModel = 'onnx-community/whisper-base.en';
   try {
     return { ...defaults, ...JSON.parse(localStorage.getItem(KEY) ?? '{}') };
   } catch {
@@ -93,6 +97,27 @@ export function renderSettings(root, settings) {
   const speedBox = document.createElement('span');
   speedBox.append(speed, speedValue);
 
+  const stretch = document.createElement('input');
+  stretch.type = 'range';
+  stretch.min = '1';
+  stretch.max = '1.6';
+  stretch.step = '0.05';
+  stretch.value = String(settings.playbackRate);
+  const stretchValue = document.createElement('span');
+  stretchValue.textContent = `${Number(settings.playbackRate).toFixed(2)}×`;
+  stretch.oninput = () => {
+    settings.playbackRate = Number(stretch.value);
+    stretchValue.textContent = `${settings.playbackRate.toFixed(2)}×`;
+    save(settings);
+  };
+  const stretchBox = document.createElement('span');
+  stretchBox.append(stretch, stretchValue);
+
+  const bargeIn = document.createElement('input');
+  bargeIn.type = 'checkbox';
+  bargeIn.checked = settings.bargeIn;
+  bargeIn.onchange = () => { settings.bargeIn = bargeIn.checked; save(settings); };
+
   const speak = document.createElement('input');
   speak.type = 'checkbox';
   speak.checked = settings.speakReplies;
@@ -101,7 +126,9 @@ export function renderSettings(root, settings) {
   root.append(
     row('Speak replies', speak),
     row('Voice', voice),
-    row('Speed', speedBox),
+    row('Speed', speedBox, 'how fast the voice is generated'),
+    row('Extra speed-up', stretchBox, 'speeds up playback without raising the pitch'),
+    row('Interrupt by talking', bargeIn),
     row('Speech recognition', sttModel),
     row('Recognition runs on', sttDevice),
     row('Speech model', ttsModel),

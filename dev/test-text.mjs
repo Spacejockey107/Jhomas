@@ -59,3 +59,23 @@ assert.equal(isNoiseTranscript('Thank you.', 3), false);
 assert.equal(isNoiseTranscript('List the files.', 0.9), false);
 
 console.log('text helpers: all checks passed');
+
+// Spoken commands
+const { matchApprovalWord, isStopCommand, speakableCommand, needsTap } = await import('../site/speech/text.js');
+assert.equal(matchApprovalWord('Approve.'), 'approve');
+assert.equal(matchApprovalWord('Jhomas, deny.'), 'deny');
+assert.equal(matchApprovalWord('Read it.'), 'read');
+assert.equal(matchApprovalWord('I think we should approve it after lunch'), null);
+assert.equal(matchApprovalWord('What time is it?'), null);
+assert.equal(isStopCommand('Stop.'), true);
+assert.equal(isStopCommand('Never mind.'), true);
+assert.equal(isStopCommand('Stop the container please'), false);
+assert.equal(speakableCommand('python3 /workspace/fibonacci.py'), 'python3 fibonacci.py');
+assert.equal(speakableCommand('wget -O /workspace/a.html "https://www.google.com/search?q=x"'), 'wget -O a.html www.google.com');
+assert.equal(speakableCommand('a b c d e f g h', 4), 'a b c d and more');
+assert.equal(needsTap({ kind: 'bash', command: 'rm -rf /workspace/x' }), true);
+assert.equal(needsTap({ kind: 'bash', command: 'echo hi > /etc/hosts' }), true);
+assert.equal(needsTap({ kind: 'bash', command: 'python3 /workspace/fib.py > /workspace/out.txt' }), false);
+assert.equal(needsTap({ kind: 'bash', command: 'date' }), false);
+assert.equal(needsTap({ kind: 'webfetch', command: 'https://example.com' }), false);
+console.log('spoken commands: all checks passed');

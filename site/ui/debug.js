@@ -16,8 +16,7 @@ export class DebugPanel {
     this.turn = null;
   }
 
-  mark(name) {
-    const t = performance.now();
+  mark(name, t = performance.now()) {
     if (name === 'speechEnd') {
       this.turn = { start: t, speechEnd: t };
     } else if (name === 'sent') {

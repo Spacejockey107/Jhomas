@@ -50,9 +50,15 @@ export class Approvals {
     deny.onclick = () => answer('reject');
 
     card.append(label, cmd, buttons, error);
-    this.cards.set(id, { card, command, sessionId, isWorker });
+    this.cards.set(id, { card, command, sessionId, isWorker, approval: { id, sessionId, isWorker, kind, command } });
     this.root.appendChild(card);
     this.root.hidden = false;
+  }
+
+  // The oldest approval still waiting, or null.
+  first() {
+    const [entry] = this.cards.values();
+    return entry?.approval ?? null;
   }
 
   resolve(id) {

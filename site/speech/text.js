@@ -103,3 +103,45 @@ export function isNoiseTranscript(text, audioSeconds) {
   const plain = trimmed.toLowerCase().replace(/[^a-z' ]/g, '').trim();
   return audioSeconds < 1.5 && NOISE.has(plain);
 }
+
+// ---------- spoken commands ----------
+
+function plainWords(text) {
+  return text.toLowerCase().replace(/[^a-z' ]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+// While an approval is waiting, only these count. Anything else is ignored.
+const APPROVE = new Set(['approve', 'approved', 'approve it', 'i approve', 'yes approve', 'a prove', 'approve that', 'approve once']);
+const DENY = new Set(['deny', 'denied', 'deny it', 'no deny', 'deny that', 'reject', 'reject it', 'the night', 'deni']);
+const READ = new Set(['read it', 'read it out', 'read that', 'read', 'repeat', 'repeat that', 'what is it', "what's the command", 'read the command']);
+
+export function matchApprovalWord(text) {
+  const t = plainWords(text).replace(/^(jhomas )/, '');
+  if (APPROVE.has(t)) return 'approve';
+  if (DENY.has(t)) return 'deny';
+  if (READ.has(t)) return 'read';
+  return null;
+}
+
+// "Stop", "cancel", "never mind" on their own stop the current reply instead of being sent.
+export function isStopCommand(text) {
+  return /^(jhomas )?(stop|stop it|stop that|cancel|cancel that|never mind|nevermind|forget it|be quiet|quiet|shut up)$/.test(plainWords(text));
+}
+
+// A command in a form worth saying aloud: paths shortened to file names, symbols dropped.
+export function speakableCommand(command, maxWords = Infinity) {
+  const words = command
+    .replace(/[|&;<>`"'\\(){}$]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => (w.includes('/') && !/^https?:/.test(w) ? w.split('/').filter(Boolean).pop() ?? w : w))
+    .map((w) => (/^https?:\/\//.test(w) ? new URL(w).hostname : w));
+  const shown = words.slice(0, maxWords).join(' ');
+  return words.length > maxWords ? `${shown} and more` : shown;
+}
+
+// Deleting or moving files, or writing outside the workspace, needs a tap on screen, not a voice "approve".
+export function needsTap(approval) {
+  if (approval.kind !== 'bash') return approval.kind === 'edit' && !/^\/workspace\//.test(approval.command);
+  return /(^|[\s;&|(])(rm|rmdir|unlink|mv|dd|mkfs|shred|truncate|chmod|chown|kill|pkill|reboot|shutdown)\b|>\s*\/(?!workspace\/)|\bsudo\b/.test(approval.command);
+}

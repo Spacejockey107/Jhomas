@@ -58,5 +58,9 @@ export const config = {
   // Said by the page itself when the agent can't (it ends the turn silently after a denial).
   lines: {
     denied: "Okay, I won't run it.",
+    approved: 'Approved.',
+    workerDenied: 'Okay, denied.',
+    needsTap: 'That one needs a tap on the screen.',
+    stopped: 'Stopped.',
   },
 };

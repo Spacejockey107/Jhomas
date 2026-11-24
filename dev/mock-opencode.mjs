@@ -56,6 +56,13 @@ async function replayTurn(text) {
   let prevT = turn[0].t;
   for (const { t, ev } of turn) {
     await sleep(Math.min(250, Math.max(0, t - prevT)));
+    if (aborted) {
+      // What OpenCode sends when a turn is stopped.
+      broadcast({ type: 'session.error', properties: { sessionID: mainId, error: { name: 'MessageAbortedError', data: { message: 'Aborted' } } } });
+      broadcast({ type: 'session.status', properties: { sessionID: mainId, status: { type: 'idle' } } });
+      aborted = false;
+      return;
+    }
     prevT = t;
     let out = ev;
     // Show the text that was actually typed instead of the recorded user text.
@@ -66,6 +73,7 @@ async function replayTurn(text) {
     if (ev.type === 'permission.replied') {
       // Wait for the page to answer before replaying the recorded answer.
       if (waitingFor) await new Promise((r) => (resumeReplay = r));
+      if (aborted) continue;
     }
     broadcast(out);
     if (ev.type === 'permission.asked') waitingFor = ev.properties.id;
@@ -129,7 +137,12 @@ http.createServer(async (req, res) => {
     return json(res, 200, true);
   }
   if (path === `/api/session/${mainId}/abort` && req.method === 'POST') {
+    log.push('  abort');
     aborted = true;
+    if (waitingFor) {
+      waitingFor = null;
+      resumeReplay?.();
+    }
     return json(res, 200, true);
   }
   if (path === '/__log') return json(res, 200, log);

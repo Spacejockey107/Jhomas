@@ -16,9 +16,9 @@
 //   connection       { state: 'connecting' | 'open' | 'reconnecting', error? }
 //   resync           {}   the stream reconnected; events may have been missed, reload the session
 //   sessionUpdated   { id, title }
-//   userMessage      { sessionId, partId, text }
-//   textDelta        { sessionId, partId, delta, isWorker }
-//   textDone         { sessionId, partId, text, isWorker }
+//   userMessage      { sessionId, messageId, partId, text }
+//   textDelta        { sessionId, partId, delta, isWorker, replyTo }   replyTo = the user messageId it answers
+//   textDone         { sessionId, partId, text, isWorker, replyTo }
 //   toolStart        { sessionId, callId, tool, title, isWorker }
 //   toolEnd          { sessionId, callId, tool, title, ok, error?, isWorker }
 //   subtaskStart     { sessionId, title }          a handoff to the worker began (sessionId = worker's)

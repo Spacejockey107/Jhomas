@@ -7,6 +7,7 @@ import { Approvals } from './ui/approvals.js';
 import { DebugPanel } from './ui/debug.js';
 import { Voice } from './voice.js';
 import { loadSettings, renderSettings } from './settings.js';
+import { speakableCommand, needsTap } from './speech/text.js';
 
 const $ = (id) => document.getElementById(id);
 const SESSION_KEY = 'jhomas.session';
@@ -40,9 +41,15 @@ const voice = new Voice({
       button.setAttribute('aria-pressed', String(state !== 'off'));
       button.title = state === 'off' ? 'Turn voice on' : 'Turn voice off';
       renderStatus();
+      keepScreenAwake(state !== 'off');
     },
-    transcript: (text) => sendText(text),
-    timing: (name) => debug.mark(name),
+    transcript: (text, { interrupting }) => spoken(text, interrupting),
+    approvalWord: (word, approval) => approvalByVoice(word, approval),
+    announceApproval: (approval) => voice.say(approvalLine(approval)),
+    command: (name) => {
+      if (name === 'stop') stopTurn();
+    },
+    timing: (name, at) => debug.mark(name, at),
     progress: (percent) => {
       loadPercent = percent;
       renderStatus();
@@ -58,6 +65,86 @@ window.jhomas = { agent, voice, settings };
 let currentId = null;
 let sessions = [];
 let workerRunning = false;
+let busyNow = false;
+let abortPending = false; // we asked OpenCode to stop; the "aborted" error that follows is expected
+
+// ---------- voice helpers ----------
+
+function approvalLine(a) {
+  const who = a.isWorker ? 'The worker wants' : 'I want';
+  let what;
+  if (a.kind === 'bash') what = `to run ${speakableCommand(a.command, 6)}`;
+  else if (a.kind === 'webfetch') what = `to fetch ${speakableCommand(a.command)}`;
+  else what = `to use ${a.kind}`;
+  const tail = needsTap(a) ? 'This one needs a tap on the screen.' : 'Approve or deny?';
+  return `${who} ${what}. ${tail}`;
+}
+
+async function approvalByVoice(word, approval) {
+  if (word === 'read') {
+    voice.say(`The full command is: ${speakableCommand(approval.command)}.`);
+    voice.setApproval(approval); // still waiting
+    return;
+  }
+  if (word === 'approve' && needsTap(approval)) {
+    voice.say(config.lines.needsTap);
+    return;
+  }
+  try {
+    await agent.replyApproval(approval.id, approval.sessionId, word === 'approve' ? 'once' : 'reject');
+    if (word === 'approve') voice.say(config.lines.approved);
+    else if (approval.isWorker) voice.say(config.lines.workerDenied);
+  } catch (e) {
+    transcript.note(`Couldn't send the answer: ${e.message}`, 'error');
+  }
+}
+
+async function stopTurn() {
+  voice.notSpeaker();
+  if (!busyNow) return;
+  abortPending = true;
+  try {
+    await agent.abort();
+  } catch (e) {
+    abortPending = false;
+    transcript.note(`Couldn't stop: ${e.message}`, 'error');
+  }
+}
+
+// Something you said. If Jhomas was mid-reply, that reply is stopped first; if the worker
+// is busy, the message waits its turn instead of cancelling the worker's job.
+async function spoken(text, interrupting) {
+  if (interrupting && busyNow && !workerRunning) {
+    abortPending = true;
+    try {
+      await agent.abort();
+      // Let the stopped turn finish ending before the new one starts, so its
+      // "turn ended" signal isn't mistaken for the new reply's.
+      const deadline = performance.now() + 3000;
+      while (busyNow && performance.now() < deadline) await new Promise((r) => setTimeout(r, 50));
+    } catch {
+      abortPending = false;
+    }
+  }
+  sendText(text);
+}
+
+// Keeps the phone screen on while voice is on, so the browser doesn't stop listening.
+let wakeLock = null;
+async function keepScreenAwake(on) {
+  try {
+    if (on && !wakeLock && 'wakeLock' in navigator && document.visibilityState === 'visible') {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => (wakeLock = null));
+    } else if (!on && wakeLock) {
+      await wakeLock.release();
+      wakeLock = null;
+    }
+  } catch {
+    // Not allowed right now (e.g. battery saver); listening still works while the screen is on.
+  }
+}
+document.addEventListener('visibilitychange', () => keepScreenAwake(voice.state !== 'off'));
 
 // ---------- small helpers ----------
 
@@ -69,6 +156,7 @@ function remembered() {
 }
 
 function setBusy(busy) {
+  busyNow = busy;
   $('stop').disabled = !busy;
   renderStatus(busy);
 }
@@ -139,40 +227,52 @@ agent.on('sessionUpdated', ({ id, title }) => {
   if (option) option.textContent = sessionLabel(s ?? { title });
 });
 
-agent.on('userMessage', ({ text }) => {
+agent.on('userMessage', ({ text, messageId }) => {
   // A message sent from another device: that device speaks the reply, not this one.
-  if (!transcript.confirmUser(text)) voice.notSpeaker();
+  if (transcript.confirmUser(text)) voice.confirmTurn(messageId);
+  else voice.notSpeaker();
 });
 
-agent.on('textDelta', ({ partId, delta, sessionId, isWorker }) => {
+agent.on('textDelta', ({ partId, delta, sessionId, isWorker, replyTo }) => {
   if (!isWorker) {
     debug.mark('firstText');
-    voice.replyDelta(partId, delta);
+    voice.replyDelta(partId, delta, replyTo);
   }
   transcript.appendText(partId, delta, sessionId, isWorker);
 });
 
-agent.on('textDone', ({ partId, text, sessionId, isWorker }) => {
-  if (!isWorker) voice.replyDone(partId, text);
+agent.on('textDone', ({ partId, text, sessionId, isWorker, replyTo }) => {
+  if (!isWorker) voice.replyDone(partId, text, replyTo);
   transcript.finishText(partId, text, sessionId, isWorker);
 });
-agent.on('toolStart', (p) => transcript.toolStart(p));
-agent.on('toolEnd', (p) => transcript.toolEnd(p));
+
+agent.on('toolStart', (p) => {
+  if (!p.isWorker && p.tool !== 'task') voice.toolStarted(p.callId, p.tool, p.title);
+  transcript.toolStart(p);
+});
+
+agent.on('toolEnd', (p) => {
+  if (!p.isWorker) voice.toolEnded(p.callId);
+  transcript.toolEnd(p);
+});
 
 agent.on('subtaskStart', ({ sessionId, title }) => {
   workerRunning = true;
   transcript.subtaskStart(sessionId, title);
+  voice.workerStarted();
   renderStatus();
 });
 
 agent.on('subtaskEnd', ({ sessionId, ok }) => {
   workerRunning = false;
   transcript.subtaskEnd(sessionId, ok);
+  voice.workerEnded(ok);
   renderStatus();
 });
 
 agent.on('approvalRequested', (approval) => {
   approvals.show(approval);
+  voice.setApproval(approvals.first());
   renderStatus();
 });
 
@@ -181,6 +281,7 @@ agent.on('approvalResolved', ({ id, reply }) => {
   if (resolved) transcript.note(`${reply === 'reject' ? 'Denied' : 'Approved'}: ${resolved.command}`, '', resolved.sessionId, resolved.isWorker);
   // After a denial OpenCode ends the voice agent's turn without a reply, so say something.
   if (resolved && reply === 'reject' && !resolved.isWorker) voice.say(config.lines.denied);
+  voice.setApproval(approvals.first());
   renderStatus();
 });
 
@@ -197,11 +298,14 @@ agent.on('turnEnd', () => {
 
 agent.on('error', ({ message, aborted, isWorker }) => {
   if (aborted) {
-    voice.notSpeaker(); // don't read out the partial reply that arrives after a stop
+    // Stopped from here: speech was already handled. Stopped elsewhere: go quiet.
+    if (abortPending) abortPending = false;
+    else voice.notSpeaker();
     transcript.note('Stopped.');
     return;
   }
-  if (!isWorker) voice.turnEnded();
+  if (isWorker) voice.workerFailed();
+  else voice.turnEnded();
   transcript.note(`${isWorker ? 'Worker error' : 'Error'}: ${message}`, 'error');
 });
 
@@ -245,14 +349,7 @@ input.addEventListener('keydown', (e) => {
 });
 $('send').onclick = send;
 
-$('stop').onclick = async () => {
-  voice.notSpeaker(); // stop talking and don't read out the rest of this reply
-  try {
-    await agent.abort();
-  } catch (e) {
-    transcript.note(`Couldn't stop: ${e.message}`, 'error');
-  }
-};
+$('stop').onclick = () => stopTurn();
 
 $('newSession').onclick = async () => {
   try {
@@ -268,7 +365,11 @@ $('newSession').onclick = async () => {
 $('sessions').onchange = (e) => openSession(e.target.value);
 
 $('mic').onclick = () => {
-  if (voice.state === 'off') voice.enable();
+  if (voice.state === 'off') {
+    // Ask the browser to keep the downloaded speech models instead of clearing them when space is low.
+    navigator.storage?.persist?.().catch(() => {});
+    voice.enable();
+  }
   else if (voice.state !== 'loading') voice.disable();
 };
 $('debugBox').addEventListener('toggle', () => debug.refresh());

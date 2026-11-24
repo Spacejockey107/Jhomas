@@ -78,6 +78,7 @@ export class OpenCodeV1Adapter extends AgentAdapter {
   resetSessionState() {
     this.children = new Set();       // worker sessions started from the current session
     this.roles = new Map();          // messageId -> 'user' | 'assistant'
+    this.replyTo = new Map();        // assistant messageId -> the user messageId it answers
     this.partTypes = new Map();      // partId -> 'text' | 'reasoning' | 'tool' | ...
     this.seenUserParts = new Set();
     this.toolsStarted = new Set();
@@ -193,7 +194,10 @@ export class OpenCodeV1Adapter extends AgentAdapter {
       case 'session.updated':
         return this.onSession(p.info);
       case 'message.updated':
-        if (p.info?.id) this.roles.set(p.info.id, p.info.role);
+        if (p.info?.id) {
+          this.roles.set(p.info.id, p.info.role);
+          if (p.info.parentID) this.replyTo.set(p.info.id, p.info.parentID);
+        }
         return;
       case 'message.part.updated':
         return this.onPart(p.part);
@@ -245,12 +249,12 @@ export class OpenCodeV1Adapter extends AgentAdapter {
       if (this.roles.get(part.messageID) === 'user') {
         if (isWorker || part.synthetic || this.seenUserParts.has(part.id)) return;
         this.seenUserParts.add(part.id);
-        this.emit('userMessage', { sessionId: part.sessionID, partId: part.id, text: part.text ?? '' });
+        this.emit('userMessage', { sessionId: part.sessionID, messageId: part.messageID, partId: part.id, text: part.text ?? '' });
         return;
       }
       if (part.time?.end && !this.textsDone.has(part.id)) {
         this.textsDone.add(part.id);
-        this.emit('textDone', { sessionId: part.sessionID, partId: part.id, text: part.text ?? '', isWorker });
+        this.emit('textDone', { sessionId: part.sessionID, partId: part.id, text: part.text ?? '', isWorker, replyTo: this.replyTo.get(part.messageID) ?? null });
       }
       return;
     }
@@ -262,7 +266,7 @@ export class OpenCodeV1Adapter extends AgentAdapter {
     const type = this.partTypes.get(p.partID);
     if (type && type !== 'text') return; // reasoning is never shown as reply text
     if (this.roles.get(p.messageID) === 'user') return;
-    this.emit('textDelta', { sessionId: p.sessionID, partId: p.partID, delta: p.delta ?? '', isWorker: this.isWorker(p.sessionID) });
+    this.emit('textDelta', { sessionId: p.sessionID, partId: p.partID, delta: p.delta ?? '', isWorker: this.isWorker(p.sessionID), replyTo: this.replyTo.get(p.messageID) ?? null });
   }
 
   onTool(part, isWorker) {

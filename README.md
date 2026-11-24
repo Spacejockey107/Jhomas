@@ -2,7 +2,7 @@
 
 A hands-free voice client for a self-hosted OpenCode agent. Speech recognition and speech synthesis run in the browser; only text goes to the server. The server side is one Caddy container in front of an existing OpenCode server.
 
-Status: **Milestone 2** — hands-free voice: speech is transcribed in the browser, replies are spoken sentence by sentence. Barge-in, spoken status during tools, voice approvals and the wake word come next.
+Status: **Milestone 3** — hands-free voice with interrupting, spoken status while Jhomas works, and voice approvals. The wake word comes next.
 
 ## Layout
 
@@ -96,7 +96,12 @@ The log should show Caddy issuing a certificate for `10.10.0.1` and no errors.
 2. Double-click `root.crt` → *Install Certificate* → *Current User* → *Place all certificates in the following store* → *Browse* → *Trusted Root Certification Authorities* → *Finish*, and confirm the security warning with *Yes*.
 3. Restart the browser. `https://10.10.0.1:8443` should now open with no warning. You can delete the downloaded file.
 
-**Android:** covered in Milestone 5.
+**Android (Chrome):**
+
+1. With WireGuard connected, open `https://10.10.0.1:8443/root.crt`. Choose *Advanced* → *Proceed*, log in, and the file `jhomas-root.crt` downloads.
+2. Open Settings and search for **CA certificate** (on OnePlus: *Security & privacy* → *More security settings* → *Encryption & credentials* → *Install a certificate* → *CA certificate*). Choose *Install anyway* and pick `jhomas-root.crt`.
+3. Close and reopen Chrome. `https://10.10.0.1:8443` should open without a warning.
+4. On Wi-Fi, turn voice on once and wait for *Listening*, so the speech models (about 500 MB) are downloaded and cached before you rely on mobile data.
 
 ### 6. Run the tests
 
@@ -108,6 +113,14 @@ Open `https://10.10.0.1:8443`. It opens your most recent OpenCode conversation; 
 
 **Voice:** press *Voice off* to turn the mic on. The first time, the page downloads the speech models (several hundred MB; later visits load them from the browser's cache). While it shows *Listening*, everything you say is sent when you pause; the reply is spoken on the device that sent the message. Typed messages are spoken too while voice is on. *Voice settings* changes the voice, speed and models for this browser.
 
+**While Jhomas works:** if nothing has been said for 4 seconds, it says what it's doing ("Still reading config.yaml"), again at about 10 seconds, then every 20. It stays quiet while the worker runs, except to say it handed the job over or that the worker hit a problem.
+
+**Interrupting:** start talking while Jhomas speaks and it pauses. If you were really talking, the reply is dropped and your message goes in; if it was a cough or noise, it carries on. If the worker is busy, your message waits until it's done instead of cancelling its job. Saying just "stop", "cancel" or "never mind" stops the current reply. Turn *Interrupt by talking* off in Voice settings if Jhomas keeps interrupting itself (for example over car speakers).
+
+**Approvals by voice:** Jhomas says what it wants to run and waits as long as needed. Only "approve", "deny" and "read it" count while it waits; everything else is ignored. Deleting, moving or writing outside the workspace needs a tap on the screen.
+
+**Phones:** while voice is on, the page keeps the screen awake, because Android stops the mic when the screen goes off. Keep Chrome in front.
+
 *Debug* shows each turn's timings (end of speech → sent → first text → first audio → finished) and the raw events.
 
 ## Testing without the server
@@ -118,7 +131,7 @@ Open `https://10.10.0.1:8443`. It opens your most recent OpenCode conversation; 
 node dev/mock-opencode.mjs opencode-events.json 8765
 ```
 
-`dev/replay-opencode.mjs` prints what the adapter makes of a recording. `dev/test-text.mjs` checks sentence splitting, speech cleanup and recognition corrections.
+`dev/replay-opencode.mjs` prints what the adapter makes of a recording. `dev/test-text.mjs` checks sentence splitting, speech cleanup, recognition corrections and spoken commands; `dev/test-stretch.mjs` checks the playback speed-up.
 
 ## Updating
 
