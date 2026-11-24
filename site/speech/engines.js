@@ -143,8 +143,9 @@ function loadScript(url) {
 }
 
 export class MicVad {
-  constructor(config) {
+  constructor(config, settings = {}) {
     this.config = config;
+    this.settings = settings;
     this.instance = null;
   }
 
@@ -173,9 +174,10 @@ export class MicVad {
     // Run the detection model in onnxruntime's background worker so it doesn't compete
     // with scrolling and audio on the page's main thread. Fall back if that isn't supported.
     const ort = window.ort;
+    // Experimental (off by default): may crash some phones.
     if (ort?.env?.wasm) {
       ort.env.wasm.numThreads = 1;
-      ort.env.wasm.proxy = true;
+      ort.env.wasm.proxy = Boolean(this.settings.vadInWorker);
     }
     try {
       this.instance = await create();

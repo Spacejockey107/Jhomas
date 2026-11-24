@@ -146,6 +146,10 @@ http.createServer(async (req, res) => {
     return json(res, 200, true);
   }
   if (path === '/__log') return json(res, 200, log);
+  if (path === '/__fake-kokoro.js' && process.env.FAKE_KOKORO) {
+    res.writeHead(200, { 'Content-Type': 'text/javascript' });
+    return res.end(readFileSync(process.env.FAKE_KOKORO));
+  }
   if (path.startsWith('/api/')) return json(res, 404, { error: 'not found' });
 
   // Static files

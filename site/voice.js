@@ -113,7 +113,7 @@ export class Voice {
     if (e.tts && e.tts.signature && e.tts.signature !== ttsSig) { e.tts.dispose(); e.tts = null; e.ttsReady = false; }
     e.stt = e.stt ?? new SttEngine(this.config, this.settings);
     e.tts = e.tts ?? new TtsEngine(this.config, this.settings);
-    e.vad = e.vad ?? new MicVad(this.config);
+    e.vad = e.vad ?? new MicVad(this.config, this.settings);
 
     const files = new Map();
     const progress = (who) => ({ file, loaded, total }) => {

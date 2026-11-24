@@ -13,6 +13,7 @@ export function loadSettings(config) {
     speakReplies: true,
     bargeIn: true,
     playbackRate: 1,
+    vadInWorker: false,
   };
   // Phones get the lighter recognition model unless one was chosen.
   if (/Android|iPhone|iPad/i.test(navigator.userAgent)) defaults.sttModel = 'onnx-community/whisper-base.en';
@@ -118,6 +119,11 @@ export function renderSettings(root, settings) {
   bargeIn.checked = settings.bargeIn;
   bargeIn.onchange = () => { settings.bargeIn = bargeIn.checked; save(settings); };
 
+  const vadInWorker = document.createElement('input');
+  vadInWorker.type = 'checkbox';
+  vadInWorker.checked = settings.vadInWorker;
+  vadInWorker.onchange = () => { settings.vadInWorker = vadInWorker.checked; save(settings); };
+
   const speak = document.createElement('input');
   speak.type = 'checkbox';
   speak.checked = settings.speakReplies;
@@ -133,6 +139,7 @@ export function renderSettings(root, settings) {
     row('Recognition runs on', sttDevice),
     row('Speech model', ttsModel),
     row('Speech runs on', ttsDevice),
+    row('Voice detection in background thread', vadInWorker, 'experimental: smoother scrolling, may be unstable on phones'),
   );
   const note = document.createElement('p');
   note.className = 'muted';
