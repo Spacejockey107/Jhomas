@@ -35,6 +35,9 @@ https://10.10.0.1 {
 		# libraries and model files from other sites.
 		Cross-Origin-Opener-Policy same-origin
 		Cross-Origin-Embedder-Policy credentialless
+		# Check for a newer version of page files on every load, so updates show up after
+		# a git pull without a hard refresh. Unchanged files just get "304 Not Modified".
+		Cache-Control no-cache
 		-Server
 	}
 
