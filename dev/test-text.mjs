@@ -49,6 +49,7 @@ assert.equal(fix('So testing Jomis and Jarmus and Jammus'), 'So testing Jhomas a
 assert.equal(fix('Pull the new image for radar and sonar'), 'Pull the new image for Radarr and Sonarr');
 assert.equal(fix('change the context in the lumb swap config'), 'change the context in the llama-swap config');
 assert.equal(fix('Hey Jelly Finn, refresh'), 'Hey Jellyfin, refresh');
+assert.equal(fix('Look online for alternatives to Cocoa Row 82M.'), 'Look online for alternatives to Kokoro 82M.');
 assert.equal(fix('the weather radar is down'), 'the weather radar is down'); // ordinary words left alone
 
 // Noise filter.

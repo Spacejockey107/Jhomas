@@ -82,6 +82,7 @@ export class OpenCodeV1Adapter extends AgentAdapter {
     this.seenUserParts = new Set();
     this.toolsStarted = new Set();
     this.toolsEnded = new Set();
+    this.textsDone = new Set();
     this.taskChild = new Map();      // task tool callId -> worker sessionId
     this.busy = new Map();           // sessionId -> boolean
   }
@@ -247,7 +248,8 @@ export class OpenCodeV1Adapter extends AgentAdapter {
         this.emit('userMessage', { sessionId: part.sessionID, partId: part.id, text: part.text ?? '' });
         return;
       }
-      if (part.time?.end) {
+      if (part.time?.end && !this.textsDone.has(part.id)) {
+        this.textsDone.add(part.id);
         this.emit('textDone', { sessionId: part.sessionID, partId: part.id, text: part.text ?? '', isWorker });
       }
       return;

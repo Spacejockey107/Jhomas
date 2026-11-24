@@ -41,6 +41,7 @@ export const config = {
       [/\b(?:llama|lama|lumb|loma|lamb)[ -]?swap\b/gi, 'llama-swap'],
       [/\bjelly[ -]?fin+\b/gi, 'Jellyfin'],
       [/\bopen code\b/gi, 'OpenCode'],
+      [/\b(?:cocoa[ -]?row|coco[ -]?row|cocaro|kokaro|cocoro)\b/gi, 'Kokoro'],
     ],
   },
 
