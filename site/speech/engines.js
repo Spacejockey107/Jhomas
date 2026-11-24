@@ -116,8 +116,8 @@ export class TtsEngine {
     this.device = device;
   }
 
-  async synthesize(text, { voice, speed }) {
-    const { samples, rate } = await this.client.call('synthesize', { text, voice, speed });
+  async synthesize(text, { voice, speed, playbackRate }) {
+    const { samples, rate } = await this.client.call('synthesize', { text, voice, speed, playbackRate });
     return { samples, rate };
   }
 
@@ -154,7 +154,7 @@ export class MicVad {
     await loadScript(libs.vadScript);
     if (!window.vad?.MicVAD) throw new Error('voice detection library loaded without MicVAD');
     const frames = (ms) => Math.max(1, Math.round(ms / 32)); // one Silero v5 frame = 32 ms
-    this.instance = await window.vad.MicVAD.new({
+    const create = () => window.vad.MicVAD.new({
       model: 'v5',
       baseAssetPath: libs.vadAssetBase,
       onnxWASMBasePath: libs.ortWasmBase,
@@ -170,6 +170,22 @@ export class MicVad {
       onSpeechEnd,
       onVADMisfire: onMisfire,
     });
+    // Run the detection model in onnxruntime's background worker so it doesn't compete
+    // with scrolling and audio on the page's main thread. Fall back if that isn't supported.
+    const ort = window.ort;
+    if (ort?.env?.wasm) {
+      ort.env.wasm.numThreads = 1;
+      ort.env.wasm.proxy = true;
+    }
+    try {
+      this.instance = await create();
+      this.offMainThread = Boolean(ort?.env?.wasm?.proxy);
+    } catch (e) {
+      if (!ort?.env?.wasm?.proxy) throw e;
+      ort.env.wasm.proxy = false;
+      this.instance = await create();
+      this.offMainThread = false;
+    }
     this.instance.start();
   }
 

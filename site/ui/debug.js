@@ -14,6 +14,20 @@ export class DebugPanel {
     this.logEl = log;
     this.lines = [];
     this.turn = null;
+    this.longTasks = [];
+    // Long tasks = stretches where the page's main thread was blocked (scrolling and audio stall).
+    try {
+      new PerformanceObserver((list) => {
+        for (const e of list.getEntries()) this.longTasks.push({ at: e.startTime, ms: e.duration });
+      }).observe({ type: 'longtask', buffered: true });
+    } catch { /* not supported */ }
+  }
+
+  // Milliseconds the main thread was blocked in the last 10 seconds.
+  blockedRecently() {
+    const since = performance.now() - 10000;
+    this.longTasks = this.longTasks.filter((t) => t.at > since);
+    return Math.round(this.longTasks.reduce((sum, t) => sum + t.ms, 0));
   }
 
   mark(name, t = performance.now()) {
@@ -37,7 +51,7 @@ export class DebugPanel {
     const parts = [];
     if (turn.speechEnd != null) parts.push(`transcribed and sent: ${at('sent')}`);
     parts.push(`first text: ${at('firstText')}`, `first audio: ${at('firstAudio')}`, `finished: ${at('turnEnd')}`);
-    this.timingsEl.textContent = `Last turn (from ${turn.speechEnd != null ? 'end of speech' : 'Send'}) — ${parts.join(', ')}`;
+    this.timingsEl.textContent = `Last turn (from ${turn.speechEnd != null ? 'end of speech' : 'Send'}) — ${parts.join(', ')}. Page blocked ${this.blockedRecently()} ms in the last 10 s.`;
   }
 
   event(name, payload) {

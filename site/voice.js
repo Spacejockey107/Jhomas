@@ -16,7 +16,6 @@
 
 import { SttEngine, TtsEngine, MicVad } from './speech/engines.js';
 import { Player } from './speech/player.js';
-import { timeStretch } from './speech/stretch.js';
 import { SentenceSplitter, applyCorrections, isNoiseTranscript, matchApprovalWord, isStopCommand } from './speech/text.js';
 
 const SAMPLE_RATE = 16000;
@@ -304,13 +303,17 @@ export class Voice {
         const item = this.queue.shift();
         let audio;
         try {
-          audio = await this.engines.tts.synthesize(item.text, { voice: this.settings.voice, speed: this.settings.speed });
+          audio = await this.engines.tts.synthesize(item.text, {
+            voice: this.settings.voice,
+            speed: this.settings.speed,
+            playbackRate: this.settings.playbackRate ?? 1,
+          });
         } catch (e) {
           this.on.error?.(`Speech failed: ${e.message}`);
           continue;
         }
         if (generation !== this.generation) break; // stopped while generating
-        const samples = timeStretch(audio.samples, this.settings.playbackRate ?? 1, audio.rate);
+        const samples = audio.samples;
         const delay = this.player.play(samples, audio.rate);
         if (item.kind === 'reply') {
           // Real reply speech resets the quiet-time clock for status lines.

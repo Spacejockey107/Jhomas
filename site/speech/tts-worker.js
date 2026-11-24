@@ -1,5 +1,7 @@
 // Text-to-speech (Kokoro) in a background thread.
 
+import { timeStretch } from './stretch.js';
+
 let tts = null;
 
 const post = (message, transfer) => self.postMessage(message, transfer ?? []);
@@ -58,8 +60,11 @@ self.onmessage = async ({ data }) => {
       const audio = await tts.generate(data.text, { voice: data.voice, speed: data.speed });
       const source = audio.audio ?? audio.data;
       if (!(source instanceof Float32Array)) throw new Error('unexpected audio format from kokoro-js');
-      const samples = source.slice(); // own copy, so it can be transferred
-      post({ type: 'result', id: data.id, samples, rate: audio.sampling_rate ?? 24000, ms: performance.now() - t0 }, [samples.buffer]);
+      const rate = audio.sampling_rate ?? 24000;
+      // Extra speed-up happens here, off the page's main thread.
+      const stretched = timeStretch(source, data.playbackRate ?? 1, rate);
+      const samples = stretched === source ? source.slice() : stretched.slice(); // own copy, so it can be transferred
+      post({ type: 'result', id: data.id, samples, rate, ms: performance.now() - t0 }, [samples.buffer]);
     }
   } catch (e) {
     post({ type: 'error', id: data.id, message: e?.message ?? String(e) });
